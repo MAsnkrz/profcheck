@@ -1,0 +1,3 @@
+discord.py>=2.3.0
+keepa>=1.4.0
+requests>=2.31.0
