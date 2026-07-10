@@ -194,11 +194,12 @@ def build_pass_embed(barcode, cost_price, keepa_data, profit_data, clean_title):
         # Cost & fees
         {"name": "💸 Qogita Cost (ex-VAT)", "value": f"£{profit_data['cost']/1.2:.2f}", "inline": True},
         {"name": "💸 Purchase Cost (inc-VAT)","value": f"£{profit_data['cost']:.2f}", "inline": True},
-        {"name": "🏦 Referral Fee",   "value": f"£{profit_data['ref_fee']:.2f} ({profit_data['ref_pct']*100:.0f}%)", "inline": True},
-        {"name": "📦 FBA Fee",        "value": f"£{profit_data['fba_fee']:.2f}" if profit_data['fba_fee'] else "N/A", "inline": True},
-        {"name": "🧾 Total Fees",     "value": f"£{profit_data['total_fees']:.2f}", "inline": True},
-        {"name": "🏛️ Net VAT",        "value": f"£{profit_data['net_vat']:.2f}", "inline": True},
-        # Results
+        {"name": "🏦 Referral Fee",            "value": f"£{profit_data['ref_fee']:.2f} ({profit_data['ref_pct']*100:.0f}%)", "inline": True},
+        {"name": "📦 FBA Fee",                  "value": f"£{profit_data['fba_fee']:.2f}" if profit_data['fba_fee'] else "N/A", "inline": True},
+        {"name": "💻 Digital Services",         "value": f"£{profit_data['dig_fee']:.2f}", "inline": True},
+        {"name": "🧾 Total Fees",               "value": f"£{profit_data['total_fees']:.2f}", "inline": True},
+        {"name": "🏛️ VAT on Fees (reclaim)",    "value": f"£{profit_data['vat_on_fees']:.2f}", "inline": True},
+        {"name": "🏛️ VAT Due (HMRC)",           "value": f"£{profit_data['vat_due']:.2f}", "inline": True},
         {"name": "💰 Net Profit",     "value": f"**£{profit:.2f}**",    "inline": True},
         {"name": "📈 ROI",            "value": f"**{roi:.1f}%**",        "inline": True},
         {"name": "📐 Margin",         "value": f"{profit_data['margin_pct']:.1f}%", "inline": True},
