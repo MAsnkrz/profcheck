@@ -192,7 +192,8 @@ def build_pass_embed(barcode, cost_price, keepa_data, profit_data, clean_title):
         {"name": "📊 BSR",            "value": f"{bsr:,}" if bsr else "-",           "inline": True},
         {"name": "📦 Est. Sales/mo",  "value": f"~{monthly:,}" if monthly else "-",  "inline": True},
         # Cost & fees
-        {"name": "💸 Purchase Cost",  "value": f"£{profit_data['cost']:.2f}", "inline": True},
+        {"name": "💸 Qogita Cost (ex-VAT)", "value": f"£{profit_data['cost']/1.2:.2f}", "inline": True},
+        {"name": "💸 Purchase Cost (inc-VAT)","value": f"£{profit_data['cost']:.2f}", "inline": True},
         {"name": "🏦 Referral Fee",   "value": f"£{profit_data['ref_fee']:.2f} ({profit_data['ref_pct']*100:.0f}%)", "inline": True},
         {"name": "📦 FBA Fee",        "value": f"£{profit_data['fba_fee']:.2f}" if profit_data['fba_fee'] else "N/A", "inline": True},
         {"name": "🧾 Total Fees",     "value": f"£{profit_data['total_fees']:.2f}", "inline": True},
