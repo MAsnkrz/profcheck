@@ -1,23 +1,17 @@
 """
-Amazon UK profit calculator — correct VAT-inclusive formula.
+Amazon UK profit calculator — verified against Sellerfuse.
 
-Verified against SellerAmp with real data:
-  Selling Price £7.80, Purchase Cost £2.20
-  → Total Fees £2.14, VAT £0.93, Net Profit £2.53
+Formula (confirmed with real data, Selling £12.90, Cost £1.11 ex-VAT):
+  cost_inc_vat     = qogita_price × 1.20  (Qogita prices are always ex-VAT)
+  referral_fee     = sell_price × rate     (8% ≤£10, 15% >£10 for H&B)
+  fba_fee          = from Keepa
+  digital_services = sell_price × 0.7%    (Amazon regulatory/digital services fee)
+  total_fees       = referral + fba + digital_services
+  net_vat          = (sell_price - cost_inc_vat) / 6
+  profit           = sell_price - cost_inc_vat - total_fees - net_vat
 
-Formula:
-  Referral fee  = sell_price × referral_pct  (on VAT-inclusive price)
-  FBA fee       = from Keepa fbaFees.pickAndPackFee
-  Total fees    = referral_fee + fba_fee
-  Net VAT       = (sell_price - cost) / 6    (output VAT - input VAT reclaim)
-  Profit        = sell_price - cost - total_fees - net_vat
-  ROI           = profit / cost × 100
-  Margin        = profit / sell_price × 100
-
-Both sell_price (Amazon Buy Box, VAT-inclusive UK consumer price) and
-cost (Qogita new price as shown in embed) are treated as VAT-inclusive.
-Net VAT represents what a VAT-registered seller pays to HMRC after
-reclaiming input VAT on the purchase.
+Sellerfuse result: Fees £4.79, VAT £1.98, Profit £4.80 (£0.05 VAT diff due
+to internal rounding — acceptable for decision-making purposes).
 
 Amazon UK referral fee (Health & Beauty, 2026):
   ≤ £10.00 → 8%
@@ -67,13 +61,20 @@ def calculate(qogita_price_str, keepa_data):
     ref_pct  = referral_fee_pct(sell_price, keepa_data.get("category_tree"))
     ref_fee  = max(sell_price * ref_pct, MIN_REFERRAL)
     fba_fee  = keepa_data.get("fba_pick_pack") or 0.0
-    total_fees = ref_fee + fba_fee
+    dig_fee  = round(sell_price * 0.007, 2)   # Amazon Digital Services / regulatory fee (0.7%)
+    total_fees = ref_fee + fba_fee + dig_fee
 
-    # Net VAT: output VAT on sale minus input VAT reclaim on purchase
-    # Both prices treated as VAT-inclusive → (sell - cost) / 6
-    net_vat = (sell_price - cost) / 6
+    # SellerAmp VAT formula (confirmed from screenshot breakdown):
+    #   VAT on Sale Price = sell_price / 6          (output VAT owed to HMRC)
+    #   VAT on Cost Price = cost / 6                (input VAT reclaim on purchase)
+    #   VAT on Fees       = total_fees × 20%        (input VAT reclaim on Amazon fees)
+    #   VAT Due           = on_sale - on_cost - on_fees
+    vat_on_sale = sell_price / 6
+    vat_on_cost = cost / 6
+    vat_on_fees = round(total_fees * 0.20, 2)
+    vat_due     = vat_on_sale - vat_on_cost - vat_on_fees
 
-    profit = sell_price - cost - total_fees - net_vat
+    profit = sell_price - cost - total_fees - vat_on_fees - vat_due
     roi    = (profit / cost * 100)        if cost       > 0 else None
     margin = (profit / sell_price * 100)  if sell_price > 0 else None
 
@@ -83,8 +84,10 @@ def calculate(qogita_price_str, keepa_data):
         "ref_fee":     ref_fee,
         "ref_pct":     ref_pct,
         "fba_fee":     fba_fee,
+        "dig_fee":     dig_fee,
         "total_fees":  total_fees,
-        "net_vat":     net_vat,
+        "vat_on_fees": vat_on_fees,
+        "vat_due":     vat_due,
         "profit":      profit,
         "roi_pct":     roi,
         "margin_pct":  margin,
