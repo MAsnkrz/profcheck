@@ -54,9 +54,15 @@ def calculate(qogita_price_str, keepa_data):
         return None
 
     try:
-        cost = float(str(qogita_price_str).replace("£", "").replace(",", ""))
+        qogita_price_ex_vat = float(str(qogita_price_str).replace("£", "").replace(",", ""))
     except (TypeError, ValueError):
         return None
+
+    # Qogita is a B2B platform — their prices are always ex-VAT.
+    # The actual purchase cost is the inc-VAT price (ex-VAT × 1.20).
+    # Net VAT formula: (sell_price_inc_vat - cost_inc_vat) / 6
+    # = output VAT on Amazon sale minus input VAT reclaim on purchase.
+    cost = qogita_price_ex_vat * 1.20   # inc-VAT cost (what you actually pay)
 
     ref_pct  = referral_fee_pct(sell_price, keepa_data.get("category_tree"))
     ref_fee  = max(sell_price * ref_pct, MIN_REFERRAL)
