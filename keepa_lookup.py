@@ -149,15 +149,31 @@ def _parse_product(product):
     # Category
     category_tree = [c.get("name") for c in (product.get("categoryTree") or []) if c.get("name")]
 
+    # 30-day and 90-day average buy box prices (index 10)
+    avg30 = stats.get("avg30") or []
+    avg90 = stats.get("avg90") or []
+    buybox_avg30 = avg30[10] / 100.0 if len(avg30) > 10 and avg30[10] and avg30[10] > 0 else None
+    buybox_avg90 = avg90[10] / 100.0 if len(avg90) > 10 and avg90[10] and avg90[10] > 0 else None
+
+    # Offer/seller count — available in stats without extra token cost
+    offer_count = stats.get("offerCountFba", 0) or 0
+    offer_count += stats.get("offerCountFbm", 0) or 0
+    # Fallback: check product-level field
+    if not offer_count:
+        offer_count = product.get("offerCount") or product.get("totalOfferCount") or None
+
     return {
         "asin":            product.get("asin"),
         "title":           product.get("title"),
         "sell_price":      sell_price,
         "buybox_price":    buybox_price,
+        "buybox_avg30":    buybox_avg30,
+        "buybox_avg90":    buybox_avg90,
         "amazon_price":    amazon_price,
         "sales_rank":      sales_rank,
         "avg_sales_rank_30": avg_sales_rank_30,
         "monthly_sales":   _estimate_monthly_sales(product),
+        "offer_count":     offer_count,
         "fba_pick_pack":   pick_pack_fee,
         "category_tree":   category_tree,
         "amazon_url":      f"https://www.amazon.co.uk/dp/{product.get('asin')}" if product.get("asin") else None,
