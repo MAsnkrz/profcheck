@@ -130,12 +130,9 @@ def passes_filters(profit_data, keepa_data, filters):
         elif monthly < min_sales:
             failures.append(f"Est. {monthly}/mo sales < min {min_sales}/mo")
 
-    min_sellers = filters.get("min_sellers")
-    if min_sellers is not None:
-        if offer_count is None:
-            failures.append("No seller count data")
-        elif offer_count < min_sellers:
-            failures.append(f"Only {offer_count} seller(s) < min {min_sellers}")
+    # Only apply seller filter if Keepa returned the data
+    if min_sellers is not None and offer_count is not None and offer_count < min_sellers:
+        failures.append(f"Only {offer_count} seller(s) < min {min_sellers}")
 
     max_variance = filters.get("max_buybox_variance")
     if max_variance is not None and buybox and buybox > 0:
