@@ -54,10 +54,12 @@ MONITORED_CHANNEL_IDS = {
 }
 
 FILTERS = {
-    "max_bsr":           int(os.getenv("MAX_BSR", "100000")),
-    "min_monthly_sales": int(os.getenv("MIN_MONTHLY_SALES", "50")),
-    "min_roi_pct":       float(os.getenv("MIN_ROI_PCT", "15.0")),
-    "min_profit_gbp":    float(os.getenv("MIN_PROFIT_GBP", "1.0")),
+    "max_bsr":             int(os.getenv("MAX_BSR", "100000")),
+    "min_monthly_sales":   int(os.getenv("MIN_MONTHLY_SALES", "50")),
+    "min_roi_pct":         float(os.getenv("MIN_ROI_PCT", "15.0")),
+    "min_profit_gbp":      float(os.getenv("MIN_PROFIT_GBP", "1.0")),
+    "min_sellers":         int(os.getenv("MIN_SELLERS", "2")),
+    "max_buybox_variance": float(os.getenv("MAX_BUYBOX_VARIANCE", "0.15")),
 }
 
 # Webhook to post passing leads to a separate Discord channel
@@ -191,6 +193,9 @@ def build_pass_embed(barcode, cost_price, keepa_data, profit_data, clean_title):
         {"name": "🛒 Amazon Price",   "value": f"£{profit_data['sell_price']:.2f}", "inline": True},
         {"name": "📊 BSR",            "value": f"{bsr:,}" if bsr else "-",           "inline": True},
         {"name": "📦 Est. Sales/mo",  "value": f"~{monthly:,}" if monthly else "-",  "inline": True},
+        {"name": "🏪 Sellers",        "value": f"{keepa_data.get('offer_count', '-')}", "inline": True},
+        {"name": "📈 BB 30d Avg",     "value": f"£{keepa_data['buybox_avg30']:.2f}" if keepa_data.get('buybox_avg30') else "-", "inline": True},
+        {"name": "📈 BB 90d Avg",     "value": f"£{keepa_data['buybox_avg90']:.2f}" if keepa_data.get('buybox_avg90') else "-", "inline": True},
         # Cost & fees
         {"name": "💸 Qogita Cost (ex-VAT)", "value": f"£{profit_data['cost']/1.2:.2f}", "inline": True},
         {"name": "💸 Purchase Cost (inc-VAT)","value": f"£{profit_data['cost']:.2f}", "inline": True},
@@ -218,7 +223,9 @@ def build_pass_embed(barcode, cost_price, keepa_data, profit_data, clean_title):
             f"Filters: BSR ≤{FILTERS['max_bsr']:,} | "
             f"≥{FILTERS['min_monthly_sales']} sales/mo | "
             f"≥{FILTERS['min_roi_pct']}% ROI | "
-            f"≥£{FILTERS['min_profit_gbp']} profit"
+            f"≥£{FILTERS['min_profit_gbp']} profit | "
+            f"≥{FILTERS['min_sellers']} sellers | "
+            f"≤{FILTERS['max_buybox_variance']*100:.0f}% BB variance"
         )
     )
     for f in fields:
