@@ -99,25 +99,34 @@ def _price(current, idx):
 
 def _estimate_monthly_sales(product):
     """
-    Estimate monthly sales using Keepa's monthlySold field if available,
-    otherwise fall back to salesRankDrops30 (each rank drop ≈ 1 sale).
-    Returns an integer estimate or None.
-    """
-    # Keepa's own estimate (most reliable)
-    monthly_sold = product.get("monthlySold")
-    if monthly_sold and monthly_sold > 0:
-        return int(monthly_sold)
+    Estimate monthly sales using salesRankDrops30 as the primary source —
+    this counts how many times the BSR dropped in the last 30 days, where
+    each drop = approximately 1 sale. This is the same method SellerAmp
+    uses and is more accurate than Keepa's monthlySold which is ML-based
+    and can be inflated by historical high-volume periods.
 
-    # Fallback: count sales rank drops in last 30 days
-    drops30 = product.get("salesRankDrops30")
+    Priority:
+      1. salesRankDrops30  — most accurate, reflects last 30 days only
+      2. salesRankDrops90 / 3 — 90-day average if 30-day unavailable
+      3. monthlySold / 2  — Keepa ML estimate, halved to correct for
+                            typical inflation vs actual recent activity
+    """
+    stats = product.get("stats") or {}
+
+    # Primary: actual rank drops in last 30 days (≈ sales in last 30 days)
+    drops30 = product.get("salesRankDrops30") or stats.get("salesRankDrops30")
     if drops30 and drops30 > 0:
         return int(drops30)
 
-    # Second fallback: use 90-day stats if available
-    stats = product.get("stats") or {}
-    drops90 = stats.get("salesRankDrops90")
+    # Secondary: 90-day drops averaged to monthly
+    drops90 = product.get("salesRankDrops90") or stats.get("salesRankDrops90")
     if drops90 and drops90 > 0:
-        return int(drops90 / 3)  # approximate monthly from 90-day
+        return int(drops90 / 3)
+
+    # Last resort: Keepa ML estimate (divide by 2 to correct for inflation)
+    monthly_sold = product.get("monthlySold")
+    if monthly_sold and monthly_sold > 0:
+        return max(1, int(monthly_sold / 2))
 
     return None
 
@@ -155,12 +164,13 @@ def _parse_product(product):
     buybox_avg30 = avg30[10] / 100.0 if len(avg30) > 10 and avg30[10] and avg30[10] > 0 else None
     buybox_avg90 = avg90[10] / 100.0 if len(avg90) > 10 and avg90[10] and avg90[10] > 0 else None
 
-    # Offer/seller count — available in stats without extra token cost
-    offer_count = stats.get("offerCountFba", 0) or 0
-    offer_count += stats.get("offerCountFbm", 0) or 0
-    # Fallback: check product-level field
-    if not offer_count:
-        offer_count = product.get("offerCount") or product.get("totalOfferCount") or None
+    # FBA seller count specifically — offerCountFba in stats
+    # This counts sellers using FBA (Fulfilled by Amazon) only, which
+    # is what matters for competition analysis
+    fba_count = stats.get("offerCountFba")
+    if fba_count is None:
+        # Some products embed it at product level
+        fba_count = product.get("offerCountFba")
 
     return {
         "asin":            product.get("asin"),
@@ -173,7 +183,7 @@ def _parse_product(product):
         "sales_rank":      sales_rank,
         "avg_sales_rank_30": avg_sales_rank_30,
         "monthly_sales":   _estimate_monthly_sales(product),
-        "offer_count":     offer_count,
+        "fba_sellers":     fba_count,   # FBA-only seller count
         "fba_pick_pack":   pick_pack_fee,
         "category_tree":   category_tree,
         "amazon_url":      f"https://www.amazon.co.uk/dp/{product.get('asin')}" if product.get("asin") else None,
