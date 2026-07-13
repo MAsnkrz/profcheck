@@ -111,7 +111,7 @@ def passes_filters(profit_data, keepa_data, filters):
 
     bsr         = keepa_data.get("sales_rank") if keepa_data else None
     monthly     = keepa_data.get("monthly_sales") if keepa_data else None
-    offer_count = keepa_data.get("offer_count") if keepa_data else None
+    offer_count = keepa_data.get("fba_sellers") if keepa_data else None  # FBA sellers only
     buybox      = keepa_data.get("buybox_price") or keepa_data.get("sell_price")
     bb_avg30    = keepa_data.get("buybox_avg30") if keepa_data else None
     bb_avg90    = keepa_data.get("buybox_avg90") if keepa_data else None
