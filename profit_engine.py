@@ -99,15 +99,22 @@ def passes_filters(profit_data, keepa_data, filters):
     Returns (passed: bool, failures: list[str]).
 
     Filter keys (all optional):
-      max_bsr           - max sales rank        (e.g. 100000)
-      min_monthly_sales - min est. sales/month  (e.g. 50)
-      min_roi_pct       - min ROI %             (e.g. 15.0)
-      min_profit_gbp    - min profit £          (e.g. 1.0)
+      max_bsr               - max sales rank              (e.g. 100000)
+      min_monthly_sales     - min est. sales/month        (e.g. 50)
+      min_roi_pct           - min ROI %                   (e.g. 15.0)
+      min_profit_gbp        - min profit £                (e.g. 1.0)
+      min_sellers           - min number of Amazon sellers (e.g. 2)
+      max_buybox_variance   - max % diff between current buy box
+                              and 30/90d average          (e.g. 0.15 = 15%)
     """
     failures = []
 
-    bsr     = keepa_data.get("sales_rank") if keepa_data else None
-    monthly = keepa_data.get("monthly_sales") if keepa_data else None
+    bsr         = keepa_data.get("sales_rank") if keepa_data else None
+    monthly     = keepa_data.get("monthly_sales") if keepa_data else None
+    offer_count = keepa_data.get("offer_count") if keepa_data else None
+    buybox      = keepa_data.get("buybox_price") or keepa_data.get("sell_price")
+    bb_avg30    = keepa_data.get("buybox_avg30") if keepa_data else None
+    bb_avg90    = keepa_data.get("buybox_avg90") if keepa_data else None
 
     max_bsr = filters.get("max_bsr")
     if max_bsr is not None:
@@ -122,6 +129,24 @@ def passes_filters(profit_data, keepa_data, filters):
             failures.append("No sales estimate available")
         elif monthly < min_sales:
             failures.append(f"Est. {monthly}/mo sales < min {min_sales}/mo")
+
+    min_sellers = filters.get("min_sellers")
+    if min_sellers is not None:
+        if offer_count is None:
+            failures.append("No seller count data")
+        elif offer_count < min_sellers:
+            failures.append(f"Only {offer_count} seller(s) < min {min_sellers}")
+
+    max_variance = filters.get("max_buybox_variance")
+    if max_variance is not None and buybox and buybox > 0:
+        if bb_avg30 and bb_avg30 > 0:
+            v30 = abs(buybox - bb_avg30) / bb_avg30
+            if v30 > max_variance:
+                failures.append(f"Buy box vs 30d avg varies {v30*100:.0f}% > {max_variance*100:.0f}%")
+        if bb_avg90 and bb_avg90 > 0:
+            v90 = abs(buybox - bb_avg90) / bb_avg90
+            if v90 > max_variance:
+                failures.append(f"Buy box vs 90d avg varies {v90*100:.0f}% > {max_variance*100:.0f}%")
 
     if profit_data:
         roi = profit_data.get("roi_pct")
