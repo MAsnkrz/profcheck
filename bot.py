@@ -193,7 +193,7 @@ def build_pass_embed(barcode, cost_price, keepa_data, profit_data, clean_title):
         {"name": "🛒 Amazon Price",   "value": f"£{profit_data['sell_price']:.2f}", "inline": True},
         {"name": "📊 BSR",            "value": f"{bsr:,}" if bsr else "-",           "inline": True},
         {"name": "📦 Est. Sales/mo",  "value": f"~{monthly:,}" if monthly else "-",  "inline": True},
-        {"name": "🏪 Sellers",        "value": f"{keepa_data.get('offer_count', '-')}", "inline": True},
+        {"name": "🏪 FBA Sellers",    "value": f"{keepa_data.get('fba_sellers', '-')}", "inline": True},
         {"name": "📈 BB 30d Avg",     "value": f"£{keepa_data['buybox_avg30']:.2f}" if keepa_data.get('buybox_avg30') else "-", "inline": True},
         {"name": "📈 BB 90d Avg",     "value": f"£{keepa_data['buybox_avg90']:.2f}" if keepa_data.get('buybox_avg90') else "-", "inline": True},
         # Cost & fees
