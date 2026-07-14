@@ -224,8 +224,8 @@ def build_pass_embed(barcode, cost_price, keepa_data, profit_data, clean_title):
         # ASIN
         {"name": "🔗 ASIN",           "value": f"[{keepa_data['asin']}]({keepa_data['amazon_url']})" if keepa_data.get("asin") else "-", "inline": True},
         # SAS links
-        {"name": "🔍 SAS Title",      "value": f"[Search by title]({_sas_title_url(clean_title, cost_price)})",    "inline": True},
-        {"name": "🔍 SAS EAN",        "value": f"[Search by barcode]({_sas_ean_url(barcode, cost_price)})" if barcode else "-", "inline": True},
+        {"name": "🔍 SAS Title",      "value": f"[Search by title]({_sas_title_url(clean_title, str(round(profit_data['cost'],2)))})",    "inline": True},
+        {"name": "🔍 SAS EAN",        "value": f"[Search by barcode]({_sas_ean_url(barcode, str(round(profit_data['cost'],2)))})" if barcode else "-", "inline": True},
     ]
 
     embed = discord.Embed(
