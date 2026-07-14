@@ -191,20 +191,13 @@ def _parse_product(product):
     buybox_avg30 = _avg_price(avg30, 10, 18, 1, 0)
     buybox_avg90 = _avg_price(avg90, 10, 18, 1, 0)
 
-    # FBA seller count — check multiple locations in Keepa response
-    # liveOffersOrder contains the current FBA offer count in newer Keepa versions
+    # Total offer count — use all available sources
     fba_count = (
-        stats.get("offerCountFba") or
-        product.get("offerCountFba") or
-        product.get("liveOffersOrder") and len(product["liveOffersOrder"]) or
+        product.get("totalOfferCount") or
+        product.get("numberOfOffers") or
+        (stats.get("offerCountFba") or 0) + (stats.get("offerCountFbm") or 0) or
         None
     )
-    # Also try totalOfferCount as fallback (includes FBM)
-    if fba_count is None:
-        fba_count = product.get("totalOfferCount") or product.get("numberOfOffers")
-
-    print(f"  [Keepa debug] avg30 len={len(avg30)}, buybox_avg30={buybox_avg30}, buybox_avg90={buybox_avg90}")
-    print(f"  [Keepa debug] fba_count={fba_count}, offer-related keys: {[k for k in product.keys() if 'offer' in k.lower() or 'count' in k.lower() or 'live' in k.lower()]}")
 
     return {
         "asin":            product.get("asin"),
