@@ -117,34 +117,33 @@ def _price(current, idx):
 
 def _estimate_monthly_sales(product):
     """
-    Estimate monthly sales using salesRankDrops30 as the primary source —
-    this counts how many times the BSR dropped in the last 30 days, where
-    each drop = approximately 1 sale. This is the same method SellerAmp
-    uses and is more accurate than Keepa's monthlySold which is ML-based
-    and can be inflated by historical high-volume periods.
+    Estimate monthly sales using the most reliable available source.
+
+    For high-volume products (BSR < 10,000), Keepa's monthlySold ML
+    estimate is most accurate. For low-volume products, salesRankDrops30
+    (actual rank changes = approx actual sales) is more reliable.
 
     Priority:
-      1. salesRankDrops30  — most accurate, reflects last 30 days only
-      2. salesRankDrops90 / 3 — 90-day average if 30-day unavailable
-      3. monthlySold / 2  — Keepa ML estimate, halved to correct for
-                            typical inflation vs actual recent activity
+      1. monthlySold       — Keepa ML estimate, best for popular products
+      2. salesRankDrops30  — actual rank drops last 30 days (≈ sales)
+      3. salesRankDrops90/3 — 90-day average monthly approximation
     """
     stats = product.get("stats") or {}
 
-    # Primary: actual rank drops in last 30 days (≈ sales in last 30 days)
+    # Keepa's ML estimate — most accurate for bestsellers
+    monthly_sold = product.get("monthlySold")
+    if monthly_sold and monthly_sold > 0:
+        return int(monthly_sold)
+
+    # Fallback: actual rank drops in last 30 days
     drops30 = product.get("salesRankDrops30") or stats.get("salesRankDrops30")
     if drops30 and drops30 > 0:
         return int(drops30)
 
-    # Secondary: 90-day drops averaged to monthly
+    # Last resort: 90-day drops averaged to monthly
     drops90 = product.get("salesRankDrops90") or stats.get("salesRankDrops90")
     if drops90 and drops90 > 0:
         return int(drops90 / 3)
-
-    # Last resort: Keepa ML estimate (divide by 2 to correct for inflation)
-    monthly_sold = product.get("monthlySold")
-    if monthly_sold and monthly_sold > 0:
-        return max(1, int(monthly_sold / 2))
 
     return None
 
