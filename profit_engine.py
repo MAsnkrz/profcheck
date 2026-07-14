@@ -131,6 +131,7 @@ def passes_filters(profit_data, keepa_data, filters):
             failures.append(f"Est. {monthly}/mo sales < min {min_sales}/mo")
 
     # Only apply seller filter if Keepa returned the data
+    min_sellers = filters.get("min_sellers")
     if min_sellers is not None and offer_count is not None and offer_count < min_sellers:
         failures.append(f"Only {offer_count} seller(s) < min {min_sellers}")
 
