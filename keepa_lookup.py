@@ -175,19 +175,36 @@ def _parse_product(product):
     # Category
     category_tree = [c.get("name") for c in (product.get("categoryTree") or []) if c.get("name")]
 
-    # 30-day and 90-day average buy box prices (index 10)
+    # Buy box averages — try multiple indices since Keepa's CSV type
+    # mapping varies: index 10 = Buy Box (new), index 18 = Buy Box shipping
+    # The avg30/avg90 arrays mirror the same CSV type indices as current[]
     avg30 = stats.get("avg30") or []
     avg90 = stats.get("avg90") or []
-    buybox_avg30 = avg30[10] / 100.0 if len(avg30) > 10 and avg30[10] and avg30[10] > 0 else None
-    buybox_avg90 = avg90[10] / 100.0 if len(avg90) > 10 and avg90[10] and avg90[10] > 0 else None
 
-    # FBA seller count specifically — offerCountFba in stats
-    # This counts sellers using FBA (Fulfilled by Amazon) only, which
-    # is what matters for competition analysis
-    fba_count = stats.get("offerCountFba")
+    def _avg_price(arr, *indices):
+        for idx in indices:
+            if len(arr) > idx and arr[idx] and arr[idx] > 0:
+                return arr[idx] / 100.0
+        return None
+
+    # Try buy box (10), new price (1), Amazon price (0) in that order
+    buybox_avg30 = _avg_price(avg30, 10, 18, 1, 0)
+    buybox_avg90 = _avg_price(avg90, 10, 18, 1, 0)
+
+    # FBA seller count — check multiple locations in Keepa response
+    # liveOffersOrder contains the current FBA offer count in newer Keepa versions
+    fba_count = (
+        stats.get("offerCountFba") or
+        product.get("offerCountFba") or
+        product.get("liveOffersOrder") and len(product["liveOffersOrder"]) or
+        None
+    )
+    # Also try totalOfferCount as fallback (includes FBM)
     if fba_count is None:
-        # Some products embed it at product level
-        fba_count = product.get("offerCountFba")
+        fba_count = product.get("totalOfferCount") or product.get("numberOfOffers")
+
+    print(f"  [Keepa debug] avg30 len={len(avg30)}, buybox_avg30={buybox_avg30}, buybox_avg90={buybox_avg90}")
+    print(f"  [Keepa debug] fba_count={fba_count}, offer-related keys: {[k for k in product.keys() if 'offer' in k.lower() or 'count' in k.lower() or 'live' in k.lower()]}")
 
     return {
         "asin":            product.get("asin"),
