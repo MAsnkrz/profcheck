@@ -33,61 +33,79 @@ def _get_client():
 def lookup_by_ean(ean):
     """
     Look up a product on Amazon UK by EAN/GTIN barcode.
+    Tries multiple EAN formats to maximise match rate:
+      1. EAN as-is (e.g. 0000030147317)
+      2. EAN with leading zeros stripped (e.g. 30147317)
+      3. EAN zero-padded to 13 digits (standard EAN-13)
     Returns a parsed product dict or None if not found.
     """
     api = _get_client()
-    try:
-        products = api.query(
-            ean,
-            product_code_is_asin=False,
-            domain=DOMAIN,
-            stats=90,         # stats over last 90 days
-            history=True,     # need rank history for sales estimate
-            rating=False,
-        )
-    except Exception as e:
-        return {"error": str(e)}
 
-    if not products:
-        return None
+    # Build list of EAN variants to try
+    ean_str = str(ean).strip()
+    ean_stripped = ean_str.lstrip("0") or ean_str
+    ean_padded   = ean_str.zfill(13) if len(ean_str) <= 13 else ean_str
 
-    return _parse_product(products[0])
+    candidates = list(dict.fromkeys([ean_str, ean_padded, ean_stripped]))  # dedup, preserve order
+
+    for candidate in candidates:
+        try:
+            products = api.query(
+                candidate,
+                product_code_is_asin=False,
+                domain=DOMAIN,
+                stats=90,
+                history=True,
+                rating=False,
+            )
+            if products:
+                print(f"  Keepa match on EAN variant: {candidate}")
+                return _parse_product(products[0])
+        except Exception as e:
+            return {"error": str(e)}
+
+    return None
 
 
 def lookup_by_title(title):
     """
     Search Amazon UK by product title via Keepa.
+    Tries the full title first, then a shortened version (first 5 words)
+    for better match rate on long Qogita product names.
     Returns the best-matching parsed product dict or None.
     """
     api = _get_client()
-    try:
-        products = api.search_for_asins_by_title(
-            title,
-            domain=DOMAIN,
-        )
-    except Exception as e:
-        return {"error": str(e)}
 
-    if not products:
-        return None
+    # Try full title, then shortened version
+    short_title = " ".join(title.split()[:6])
+    titles_to_try = [title] if title == short_title else [title, short_title]
 
-    # Fetch full data for the top result
-    try:
-        full = api.query(
-            products[0],
-            product_code_is_asin=True,
-            domain=DOMAIN,
-            stats=90,
-            history=True,
-            rating=False,
-        )
-    except Exception as e:
-        return {"error": str(e)}
+    for t in titles_to_try:
+        try:
+            asins = api.search_for_asins_by_title(t, domain=DOMAIN)
+        except Exception as e:
+            return {"error": str(e)}
 
-    if not full:
-        return None
+        if not asins:
+            continue
 
-    return _parse_product(full[0])
+        # Fetch full data for top result
+        try:
+            full = api.query(
+                asins[0],
+                product_code_is_asin=True,
+                domain=DOMAIN,
+                stats=90,
+                history=True,
+                rating=False,
+            )
+            if full:
+                print(f"  Keepa title match on: {t[:50]}")
+                return _parse_product(full[0])
+        except Exception as e:
+            return {"error": str(e)}
+
+    return None
 
 
 def _price(current, idx):
