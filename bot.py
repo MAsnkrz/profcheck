@@ -109,13 +109,26 @@ def extract_embed_data(embed):
 
 
 def is_qogita_embed(embed):
-    """Check if this embed is from one of our Qogita monitors."""
+    """
+    Check if this embed is from one of our monitors.
+    Covers: Qogita brand monitors, deep drop, Cocoon Centre, Notino.
+    """
     footer = (embed.footer.text if embed.footer else "") or ""
     title  = (embed.title or "").upper()
-    return (
-        "qogita" in footer.lower() or
-        any(k in title for k in ("PRICE DROP", "NEW LISTING", "BACK IN STOCK", "DEEP DROP"))
-    )
+    footer_lower = footer.lower()
+
+    # Footer-based detection
+    if any(k in footer_lower for k in ("qogita", "cocooncenter", "notino")):
+        return True
+
+    # Title-based detection (works even if footer format changes)
+    if any(k in title for k in (
+        "PRICE DROP", "NEW LISTING", "BACK IN STOCK", "DEEP DROP",
+        "NEW ON SALE", "PASSES FILTERS", "COCOON CENTRE", "NOTINO SALE"
+    )):
+        return True
+
+    return False
 
 # ---------------------------------------------------------------------------
 # DISCORD EMBED BUILDER
@@ -276,9 +289,12 @@ def build_fail_embed(barcode, cost_price, keepa_data, profit_data, clean_title, 
 
 
 def build_nodata_embed(barcode, cost_price, clean_title, tried_title=False):
-    desc = f"No Amazon UK listing found for barcode `{barcode}`."
+    desc = f"No Amazon UK listing found."
+    if barcode:
+        desc += f"\nBarcode tried: `{barcode}` (and zero-padded/stripped variants)"
     if tried_title:
-        desc += f"\nAlso tried title search — no match found on Amazon UK."
+        desc += f"\nTitle search also attempted — no match on Amazon UK."
+    desc += f"\nProduct may not be listed on Amazon UK, or may be a bundle/multipack."
 
     fields = []
     if barcode:
