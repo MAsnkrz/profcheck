@@ -191,13 +191,22 @@ def _parse_product(product):
     buybox_avg30 = _avg_price(avg30, 10, 18, 1, 0)
     buybox_avg90 = _avg_price(avg90, 10, 18, 1, 0)
 
-    # Total offer count — use all available sources
+    # Total offer count — Keepa stores this in the current stats array
+    # at index 11 (Count of retrieved live offers, new condition)
+    offer_count_from_csv = None
+    if len(current) > 11 and current[11] and current[11] > 0:
+        offer_count_from_csv = current[11]
+
     fba_count = (
+        offer_count_from_csv or
         product.get("totalOfferCount") or
         product.get("numberOfOffers") or
         (stats.get("offerCountFba") or 0) + (stats.get("offerCountFbm") or 0) or
         None
     )
+
+    print(f"  [debug] current array len={len(current)}, index11={current[11] if len(current)>11 else 'N/A'}")
+    print(f"  [debug] fba_count={fba_count}, product offer keys={[k for k in product.keys() if any(x in k.lower() for x in ['offer','count','live','seller'])]}")
 
     return {
         "asin":            product.get("asin"),
